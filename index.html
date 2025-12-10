@@ -704,7 +704,15 @@
         // ============================================
         // CONFIGURACIÓN - REEMPLAZA CON TU URL
         // ============================================
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwWSEy_LqQS-f-qK09c58n1ybRySeqCqXbe6HDH18se1XNf8vH-MjglqEndunVLy2kV/exec';
+        const SCRIPT_URL = 'TU_URL_DE_GOOGLE_APPS_SCRIPT_AQUI';
+
+        // Verificar configuración al cargar
+        window.addEventListener('DOMContentLoaded', () => {
+            if (SCRIPT_URL === 'TU_URL_DE_GOOGLE_APPS_SCRIPT_AQUI') {
+                showAlert('⚠️ CONFIGURACIÓN PENDIENTE: Debes reemplazar SCRIPT_URL con tu URL de Google Apps Script desplegada', 'error');
+            }
+            loadDashboard();
+        });
 
         // Variables globales
         let currentMonth = new Date().getMonth();
@@ -758,24 +766,48 @@
         // ============================================
         async function apiCall(action, method = 'GET', data = null) {
             try {
+                // Verificar que la URL esté configurada
+                if (SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbwWSEy_LqQS-f-qK09c58n1ybRySeqCqXbe6HDH18se1XNf8vH-MjglqEndunVLy2kV/exec') {
+                    showAlert('Error: URL del script no configurada. Lee INSTRUCCIONES.md', 'error');
+                    return null;
+                }
+
                 const url = `${SCRIPT_URL}?action=${action}`;
                 const options = {
                     method: method,
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    mode: 'cors'
                 };
 
                 if (method === 'POST' && data) {
                     options.body = JSON.stringify(data);
                 }
 
+                console.log('[v0] Llamando API:', action, method);
                 const response = await fetch(method === 'POST' ? `${SCRIPT_URL}?action=${action}` : url, options);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const result = await response.json();
+                console.log('[v0] Respuesta API:', result);
                 return result;
             } catch (error) {
-                console.error('Error en API call:', error);
-                showAlert('Error de conexión con el servidor', 'error');
+                console.error('[v0] Error en API call:', error);
+                let errorMsg = 'Error de conexión con el servidor. ';
+                
+                if (error.message.includes('Failed to fetch')) {
+                    errorMsg += 'Verifica que: 1) El Apps Script esté desplegado como Web App, 2) Los permisos sean "Anyone", 3) La URL sea correcta';
+                } else if (error.message.includes('HTTP error')) {
+                    errorMsg += `Código de error: ${error.message}`;
+                } else {
+                    errorMsg += error.message;
+                }
+                
+                showAlert(errorMsg, 'error');
                 return null;
             }
         }
